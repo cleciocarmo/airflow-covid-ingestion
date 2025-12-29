@@ -17,12 +17,12 @@ This project focuses on **memory efficiency** and **clean architecture**, utiliz
 graph LR
     A[OWID Source API] -->|HTTP Stream| B(Airflow Worker)
     B -->|Boto3 Stream| C[(MinIO Data Lake)]
-    
+
     subgraph "Memory Safe Zone"
-    B -- Writes 8KB Chunks --> D[Temporary File]
-    D -- Reads Bytes --> C
+        B -- Writes 8KB Chunks --> D[Temporary File]
+        D -- Reads Bytes --> C
     end
-    
+
     style B fill:#f9f,stroke:#333,stroke-width:2px
     style C fill:#2496ED,stroke:#333,stroke-width:2px,color:white
 

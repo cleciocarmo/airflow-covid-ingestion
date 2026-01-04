@@ -1,3 +1,5 @@
 FROM apache/airflow:2.5.1-python3.8
 
-RUN pip install 'apache-airflow[amazon]' boto3
+COPY requirements.txt /requirements.txt
+
+RUN pip install --no-cache-dir -r /requirements.txt

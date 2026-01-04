@@ -1,4 +1,4 @@
-apache-airflow
 pandas
 requests
 boto3
+apache-airflow-providers-amazon

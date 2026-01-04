@@ -118,10 +118,32 @@ services:
     networks:
       - airflow-net
 
+# --- METABASE (Ferramenta de BI) ---
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    ports:
+      - "3000:3000"
+    volumes:
+      # Opcional: Persistir os dashboards se você deletar o container
+      # Se não colocar isso, ao reiniciar 'down/up' perde os gráficos criados
+      - metabase_data:/metabase-data 
+    environment:
+      # Diz pro Metabase salvar o banco interno dele nesse volume
+      - MB_DB_FILE=/metabase-data/metabase.db 
+    networks:
+      - airflow-net  # <--- TEM QUE SER A MESMA DO POSTGRES-DW
+    healthcheck:
+      test: curl --fail -I http://localhost:3000/api/health || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   minio_data:
   postgres_dw_data:
+  metabase_data:
 
 networks:
   airflow-net:

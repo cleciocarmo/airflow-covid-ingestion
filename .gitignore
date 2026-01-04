@@ -17,6 +17,8 @@ minio_data/
 # Environment variables and secrets (Security)
 .env
 .env.local
+.env.airflow
+.env.postgres
 
 # IDE specific settings (optional)
 .vscode/

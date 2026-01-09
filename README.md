@@ -1,39 +1,54 @@
-# 🦠 Airflow COVID-19 Data Ingestion Pipeline
+# 🚀 High-Performance Data Ingestion Pipeline: Airflow & MinIO
 
-![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
-![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-2.x-orange.svg)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)
-![MinIO](https://img.shields.io/badge/MinIO-Object%20Storage-c72c48.svg)
+**A production-ready data engineering pipeline designed to ingest massive datasets with memory efficiency.**
 
-A robust and scalable data engineering pipeline designed to ingest large COVID-19 datasets from **Our World in Data (OWID)** into a **MinIO Data Lake** using **Apache Airflow**.
-
-This project focuses on **memory efficiency** and **clean architecture**, utilizing streaming techniques to handle large files without exhausting container resources.
+This project demonstrates a robust ETL architecture that ingests COVID-19 data from **Our World in Data (OWID)** into a **MinIO Data Lake (S3 Compatible)**. It focuses on **resource optimization**, **clean architecture**, and **scalability**, using streaming techniques to handle large files without exhausting container resources (OOM).
 
 ---
 
-✨ Key Features
-Memory Efficient Streaming: Implements Python's requests streaming and NamedTemporaryFile to process large datasets in small chunks (8KB), preventing OOM (Out of Memory) errors.
+## 🛠️ Tech Stack & Key Concepts
 
-Custom Operator Pattern: Encapsulates business logic in a reusable CovidDownloadOperator.
+* **Orchestration:** Apache Airflow 2.x
+* **Storage (Data Lake):** MinIO (S3 Compatible Object Storage)
+* **Containerization:** Docker & Docker Compose
+* **Language:** Python 3.9+ (Boto3, Requests)
+* **Architecture:** Custom Operators, Hooks, and SOLID Principles
 
-Custom Hook Pattern: Implements a CustomS3Hook with lazy loading for efficient MinIO/S3 connections.
+---
 
-Dockerized Environment: Fully reproducible setup using Docker Compose (Airflow + MinIO + Postgres).
+## ✨ Key Features (The "Why")
 
-Idempotency: Operations rely on Airflow's logical execution dates to maintain data consistency.
+### 1. 📉 Memory Efficient Streaming (Zero-OOM)
+Instead of loading 5GB+ datasets into RAM (standard `pandas.read_csv` approach), this pipeline implements **HTTP Streaming**.
+* It processes data in **8KB chunks**.
+* Writes to a `NamedTemporaryFile` on disk.
+* Streams from disk directly to MinIO.
+* **Result:** A container with 512MB RAM can process files of **any size**.
 
-🛠️ Project Structure
+### 2. 🧩 Custom Operator Pattern
+Business logic is encapsulated in a reusable `CovidDownloadOperator`, separating concerns from the DAG definition. This promotes **DRY (Don't Repeat Yourself)** principles and makes the code testable.
 
+### 3. 🔌 Custom Hook Pattern (Lazy Loading)
+Implements a `CustomS3Hook` that manages connections to MinIO/AWS efficiently, ensuring connections are only opened when strictly necessary (Lazy Initialization).
+
+### 4. 🐳 Fully Reproducible Environment
+Infrastructure as Code (IaC) using `docker-compose`. One command sets up Airflow (Webserver, Scheduler, Triggerer), Postgres (Metadata), and MinIO.
+
+---
+
+## 🏗️ Project Structure
+
+```bash
 airflow-covid-ingestion/
 ├── dags/
-│   ├── dag_covid.py               # Main DAG definition
-│   ├── covid_download_operator.py # Custom Operator (Streaming Logic)
-│   └── custom_s3_hook.py          # Custom Hook (MinIO Connection)
-├── docker-compose.yaml            # Infrastructure definition
-├── Dockerfile                     # Custom Airflow image build
-├── requirements.txt               # Python dependencies
-└── README.md                      # Project documentation
-
+│   ├── dag_covid.py                # Main DAG definition (Orchestration logic)
+│   ├── covid_download_operator.py  # Custom Operator (Business Logic & Streaming)
+│   └── custom_s3_hook.py           # Custom Hook (MinIO/S3 Connection)
+├── docker-compose.yaml             # Infrastructure definition
+├── Dockerfile                      # Custom Airflow image build
+├── requirements.txt                # Python dependencies
+└── README.md                       # Documentation
+````
 
 🚀 Getting Started
 Prerequisites
@@ -41,77 +56,94 @@ Docker & Docker Compose installed.
 
 Git.
 
-1. Clone the Repository
+1. Clone & Start
 git clone [https://github.com/cleciocarmo/airflow-covid-ingestion.git](https://github.com/cleciocarmo/airflow-covid-ingestion.git)
 cd airflow-covid-ingestion
 
-2. Start the Infrastructure
+# Start Infrastructure (Airflow + MinIO + Postgres)
 docker-compose up -d
 
 Wait a few minutes for the Airflow Webserver to become healthy.
 
-3. Configure MinIO (Data Lake)
-Access the MinIO Console at http://localhost:9001.
+2. Configure Data Lake (MinIO)
+Access MinIO Console at http://localhost:9001.
 
-Login with user/password: minioadmin / minioadmin.
+Login: minioadmin / minioadmin.
 
-Create a bucket named: covid-lake.
+Create a Bucket named: covid-lake.
 
-4. Configure Airflow Variables (Crucial Step)
-Access Airflow UI at http://localhost:8080 (User: admin / Pass: admin).
+3. Configure Airflow Connections (Crucial)
+Access Airflow UI at http://localhost:8080 (User/Pass: admin).
 
 Go to Admin > Variables.
 
-Add the following variables (Key : Value) to connect Airflow to MinIO:
+Add the following keys to connect Airflow to the internal Docker network:
 
-Key,Value,Description
-AWS_ENDPOINT,http://minio:9000,Internal docker network address
-AWS_ACCESS_KEY_ID,minioadmin,MinIO User
-AWS_SECRET_ACCESS_KEY,minioadmin,MinIO Password
-AWS_REGION,us-east-1,Default region
+| Key | Value | Description |
+| :--- | :--- | :--- |
+| `AWS_ENDPOINT` | `http://minio:9000` | Internal docker network address |
+| `AWS_ACCESS_KEY_ID` | `minioadmin` | MinIO User |
+| `AWS_SECRET_ACCESS_KEY` | `minioadmin` | MinIO Password |
+| `AWS_REGION` | `us-east-1` | Default region |
 
-5. Trigger the DAG
-Enable the DAG ingestao_covid_19 in the Airflow UI.
+4. Trigger the DAG
+Enable the DAG ingestao_covid_19 in the UI.
 
-Trigger the DAG manually.
+Trigger it manually.
 
-Check the covid-lake bucket in MinIO to see the ingested file.
-
-🧠 Engineering Logic
-Why Streaming?
-Loading a 5GB+ CSV file entirely into RAM (e.g., pd.read_csv()) can crash standard Docker containers. This project solves this by:
-
-Opening a stream to the source URL.
-
-Writing data to a temporary file on disk in small chunks.
-
-Streaming the file from disk directly to MinIO using boto3.
-
-Automatically cleaning up temporary files after execution.
-
-# Snippet of the streaming logic
-with requests.get(self.url, stream=True) as r:
-    for chunk in r.iter_content(chunk_size=8192):
-        tmp_file.write(chunk)
+Check the covid-lake bucket in MinIO to see the raw .csv or .json file ingested.
 
 🤝 Contributing
-Feel free to submit issues or pull requests.
+Feel free to submit issues or pull requests to improve the architecture.
 
 📝 License
 This project is licensed under the MIT License.
 
-
-## 🏗️ Architecture
-
 ```mermaid
 graph LR
-    A[OWID Source API] -->|HTTP Stream| B(Airflow Worker)
-    B -->|Boto3 Stream| C[(MinIO Data Lake)]
+    %% Definição de Estilos
+    classDef orchestrator fill:#ff9f43,stroke:#333,stroke-width:2px,color:white;
+    classDef source fill:#5f27cd,stroke:#333,stroke-width:2px,color:white;
+    classDef storage fill:#2e86de,stroke:#333,stroke-width:2px,color:white;
+    classDef process fill:#10ac84,stroke:#333,stroke-width:2px,color:white;
+    classDef cloud fill:#feca57,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
 
-    subgraph "Memory Safe Zone"
-        B -- Writes 8KB Chunks --> D[Temporary File]
-        D -- Reads Bytes --> C
+    %% Camada de Orquestração
+    subgraph Airflow_Controller [Orchestrator: Apache Airflow]
+        direction TB
+        Task_Ingest(Ingestion Operator)
+        Task_Process(Spark/Python Operator)
+        Task_Ingest --> Task_Process
     end
 
-    style B fill:#f9f,stroke:#333,stroke-width:2px
-    style C fill:#2496ED,stroke:#333,stroke-width:2px,color:white
+    %% Fonte de Dados
+    Source[OWID Source API] -->|HTTP Stream| Task_Ingest
+
+    %% Fluxo de Dados (Storage)
+    subgraph Data_Lake [Data Lake Storage Layer]
+        direction TB
+        Raw_Bucket[(MinIO / S3 <br/> Bronze Zone <br/> .JSON)]
+        Refined_Bucket[(MinIO / S3 <br/> Silver Zone <br/> .Parquet)]
+    end
+
+    %% Conexões de Processamento
+    Task_Ingest -->|Raw Data Write| Raw_Bucket
+    Raw_Bucket -->|Read Bytes| Task_Process
+    Task_Process -->|Transform & Optimize| Refined_Bucket
+
+    %% Nota de Infraestrutura
+    subgraph Infra_Note [Infrastructure Replica]
+        Cloud_AWS[AWS Cloud <br/> EC2 + S3 + Glue]
+        Cloud_DB[Databricks <br/> Spark Cluster]
+    end
+
+    %% Link Visual (apenas para contexto)
+    Refined_Bucket -.-> Cloud_DB
+
+    %% Aplicação de Classes
+    class Airflow_Controller orchestrator;
+    class Source source;
+    class Raw_Bucket,Refined_Bucket storage;
+    class Task_Ingest,Task_Process process;
+    class Infra_Note cloud;
+
